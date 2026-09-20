@@ -9,6 +9,7 @@
 {% liquid
   assign block_settings = block.settings
   assign effective_submenu_color = block_settings.background_color | default: settings.page_background_color
+  assign effective_submenu_text_color = block_settings.text_color | default: settings.page_text_color
 %}
 
 {% case variant %}
@@ -109,6 +110,7 @@
               aria-controls="submenu-{{ forloop.index }}"
               aria-haspopup="true"
               aria-expanded="false"
+              on:click="/toggle"
             {%- endif -%}
             {% if link.current %}
               aria-current="page"
@@ -130,17 +132,21 @@
                     class="mega-menu__grid"
                     data-menu-grid-id="{{ list_id }}"
                   >
-                    {% render 'mega-menu-list',
-                      parent_link: link,
-                      id: list_id,
-                      section: section,
-                      grid_columns_count: 6,
-                      grid_columns_count_tablet: 4,
-                      grid_columns_count_collection_images: 8,
-                      menu_content_type: menu_content_type,
-                      content_aspect_ratio: ratio,
-                      image_border_radius: image_border_radius
-                    %}
+                    {% if menu_content_type == 'text' %}
+                      {% render 'wide-mega-menu-list', parent_link: link, id: list_id %}
+                    {% else %}
+                      {% render 'mega-menu-list',
+                        parent_link: link,
+                        id: list_id,
+                        section: section,
+                        grid_columns_count: 6,
+                        grid_columns_count_tablet: 4,
+                        grid_columns_count_collection_images: 8,
+                        menu_content_type: menu_content_type,
+                        content_aspect_ratio: ratio,
+                        image_border_radius: image_border_radius
+                      %}
+                    {% endif %}
                   </div>
                 </div>
               </div>
@@ -172,6 +178,7 @@
     <header-menu
       ref="headerMenu"
       class="header-menu"
+      style="--mega-menu-background: rgb({{ effective_submenu_color.rgb }}); --mega-menu-foreground: rgb({{ effective_submenu_text_color.rgb }});"
       {{ block.shopify_attributes }}
       data-hydration-key="header-menu"
     >
@@ -306,6 +313,7 @@
     cursor: pointer;
     height: 100%;
     margin-block: 0;
+    position: relative;
 
     &::after {
       content: '';
@@ -371,6 +379,24 @@
     color: var(--menu-top-level-font-color);
   }
 
+  .menu-list__list-item:not([slot='overflow']) > .menu-list__link[aria-expanded='true'] .menu-list__link-title {
+    box-shadow: inset 0 -2px currentcolor;
+  }
+
+  .menu-list__list-item:not([slot='overflow']) > .menu-list__link[aria-expanded='true']::before {
+    content: '';
+    position: absolute;
+    z-index: calc(var(--layer-header-menu) + 2);
+    inset-block-end: -1px;
+    inset-inline-start: 50%;
+    width: 0;
+    height: 0;
+    border-inline: 7px solid transparent;
+    border-block-end: 0;
+    border-block-start: 8px solid var(--mega-menu-background);
+    translate: -50% 100%;
+  }
+
   .overflow-menu::part(list) {
     /* Make sure focus outline is not cut off by overflow hidden */
     --focus-outline-size: calc(var(--focus-outline-offset) + var(--focus-outline-width));
@@ -428,6 +454,7 @@
 
   /* Show the submenus on hover */
   .menu-list__list-item:has([aria-expanded='true']) > .menu-list__submenu,
+  .menu-list__list-item:focus-within > .menu-list__submenu,
   /* Show the overflow menu when a menu item is hovered */
   .overflow-menu:has([slot="overflow"] [aria-expanded='true'])::part(overflow-list),
   /* Keep the submenus open when they are hovered */
@@ -705,6 +732,120 @@
   /* Hide product cards in collapsed submenus from the IntersectionObserver that fires product view events */
   .menu-list__list-item:not(:has([aria-expanded='true'])) > .menu-list__submenu product-component {
     display: none;
+  }
+
+  @media screen and (min-width: 750px) {
+    .header-menu .menu-list__submenu:has(.wide-mega-menu) {
+      --submenu-padding-block-start: clamp(2.5rem, 5vw, 5rem);
+      --submenu-padding-block-end: clamp(3rem, 6vw, 6rem);
+
+      background: var(--mega-menu-background);
+      color: var(--mega-menu-foreground);
+      z-index: calc(var(--layer-header-menu) + 1);
+      padding-inline: 0;
+    }
+
+    .menu-list__submenu:has(.wide-mega-menu) .menu-list__submenu-inner {
+      min-height: clamp(18rem, 34vh, 27rem);
+      padding-inline: clamp(2rem, 5vw, 6rem);
+    }
+
+    .wide-mega-menu {
+      width: 100%;
+      max-width: none;
+    }
+
+    .menu-list__submenu:has(.wide-mega-menu) .mega-menu {
+      display: block;
+      width: 100%;
+      max-width: none;
+    }
+
+    .menu-list__submenu:has(.wide-mega-menu) .mega-menu__grid {
+      display: block;
+      width: 100%;
+    }
+
+    .wide-mega-menu__list {
+      display: grid;
+      grid-template-columns: minmax(9rem, 1.35fr) repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(4, max-content);
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(0, 1fr);
+      align-items: start;
+      gap: clamp(0.8rem, 1.4vw, 1.35rem) clamp(2rem, 4vw, 5rem);
+      width: 100%;
+    }
+
+    .wide-mega-menu__category {
+      grid-row: 1 / span 4;
+    }
+
+    .wide-mega-menu__category-link {
+      color: var(--mega-menu-foreground);
+      font-family: var(--font-heading--family);
+      font-style: var(--font-heading--style);
+      font-weight: var(--font-heading--weight);
+      font-size: clamp(2.25rem, 4vw, 4.5rem);
+      line-height: 1;
+      text-decoration: none;
+      white-space: normal;
+    }
+
+    .wide-mega-menu__item {
+      min-width: 0;
+    }
+
+    .wide-mega-menu__column--group {
+      grid-row: span 4;
+    }
+
+    .wide-mega-menu__column-list {
+      display: grid;
+      gap: clamp(0.8rem, 1.4vw, 1.35rem);
+    }
+
+    .wide-mega-menu__link {
+      color: var(--mega-menu-foreground);
+      font-family: var(--menu-child-font-family);
+      font-style: var(--menu-child-font-style);
+      font-weight: var(--menu-child-font-weight);
+      font-size: clamp(1rem, 1.15vw, 1.25rem);
+      line-height: 1.4;
+      text-decoration: none;
+      white-space: normal;
+    }
+
+    .wide-mega-menu__group-link {
+      display: inline-block;
+      margin-block-end: 1rem;
+      font-family: var(--menu-parent-font-family);
+      font-style: var(--menu-parent-font-style);
+      font-weight: var(--menu-parent-font-weight);
+      font-size: clamp(1.1rem, 1.35vw, 1.4rem);
+    }
+
+    .wide-mega-menu__category-link:hover,
+    .wide-mega-menu__category-link:focus-visible,
+    .wide-mega-menu__link:hover,
+    .wide-mega-menu__link:focus-visible {
+      color: var(--mega-menu-foreground);
+      text-decoration: underline;
+      text-underline-offset: 0.3em;
+    }
+  }
+
+  @media screen and (min-width: 990px) {
+    .wide-mega-menu__list {
+      grid-template-columns: minmax(11rem, 1.5fr) repeat(5, minmax(0, 1fr));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu-list__list-item:where(:not([slot='overflow'])) > .menu-list__submenu,
+    .menu-list__submenu-inner {
+      transition-duration: 0.01ms;
+    }
   }
 {% endstylesheet %}
 

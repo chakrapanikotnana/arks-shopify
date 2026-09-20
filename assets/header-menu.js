@@ -293,6 +293,34 @@ class HeaderMenu extends Component {
   };
 
   /**
+   * Open a submenu when its top-level link is clicked with a pointer.
+   * Keyboard-generated clicks keep the link's normal navigation behavior;
+   * focus has already exposed the submenu for keyboard users.
+   *
+   * @param {MouseEvent} event
+   */
+  toggle = (event) => {
+    const trigger = event.target instanceof HTMLAnchorElement ? event.target : null;
+    if (
+      !trigger ||
+      event.detail === 0 ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (trigger.ariaExpanded !== 'true') {
+      this.activate(event);
+    }
+  };
+
+  /**
    * Deactivate the active item after a delay
    * @param {PointerEvent | FocusEvent} event
    */
@@ -434,7 +462,12 @@ if (!customElements.get('header-menu')) {
 function findMenuItem(element) {
   if (!(element instanceof Element)) return null;
 
-  return element?.querySelector('[ref="menuitem"]');
+  if (element.matches('[ref="menuitem"]')) return /** @type {HTMLElement} */ (element);
+
+  const listItem = element.closest('.menu-list__list-item');
+  return /** @type {HTMLElement | null} */ (
+    listItem?.querySelector('[ref="menuitem"]') ?? element.querySelector('[ref="menuitem"]')
+  );
 }
 
 /**

@@ -1,0 +1,53 @@
+{%- doc -%}
+  Renders a wide, text-only mega menu from a Shopify navigation branch.
+
+  The top-level link is the large category heading. Direct children flow down
+  the grid in groups of four. Children with descendants become a column heading
+  followed by their own links.
+
+  @param {object} parent_link - The top-level Shopify navigation link.
+  @param {string} id - Unique ID for the rendered list.
+{%- enddoc -%}
+
+<div class="wide-mega-menu">
+  <ul
+    id="{{ id }}"
+    class="wide-mega-menu__list list-unstyled"
+    role="list"
+  >
+    <li class="wide-mega-menu__category">
+      <a
+        href="{{ parent_link.url }}"
+        class="wide-mega-menu__category-link"
+      >
+        {{- parent_link.title -}}
+      </a>
+    </li>
+
+    {% for link in parent_link.links %}
+      <li class="wide-mega-menu__item{% if link.links != blank %} wide-mega-menu__column--group{% endif %}">
+        <a
+          href="{{ link.url }}"
+          class="wide-mega-menu__link{% if link.links != blank %} wide-mega-menu__group-link{% endif %}"
+        >
+          {{- link.title -}}
+        </a>
+
+        {% if link.links != blank %}
+          <ul class="wide-mega-menu__column-list list-unstyled" role="list">
+            {% for child_link in link.links %}
+              <li>
+                <a
+                  href="{{ child_link.url }}"
+                  class="wide-mega-menu__link"
+                >
+                  {{- child_link.title -}}
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</div>
