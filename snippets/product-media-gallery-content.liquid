@@ -782,6 +782,36 @@
     opacity: 0;
   }
 
+  @media screen and (min-width: 750px) {
+    .dialog-zoomed-gallery .product-media-container--image {
+      display: grid;
+      min-height: 100vh;
+      padding: 6vh 6vw;
+      place-items: center;
+    }
+
+    .dialog-zoomed-gallery .product-media__drag-zoom-wrapper {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      place-items: center;
+    }
+
+    .dialog-zoomed-gallery .product-media-container--image .product-media {
+      flex: 0 1 auto;
+      max-width: 88vw;
+      max-height: 88vh;
+    }
+
+    .dialog-zoomed-gallery .product-media-container--image .product-media__image {
+      width: auto;
+      height: auto;
+      max-width: 88vw;
+      max-height: 88vh;
+      object-fit: contain;
+    }
+  }
+
   @media screen and (max-width: 749px) {
     .dialog-zoomed-gallery {
       /* Prevent scroll wheel or swipe scrolling */

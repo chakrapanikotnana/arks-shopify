@@ -4,6 +4,10 @@
   assign block_settings = block.settings
   assign product_resource = closest.product
   assign selected_variant = product_resource.selected_or_first_available_variant
+  assign show_pdp_unit_prices = false
+  if template.name == 'product' and product_resource.id == product.id
+    assign show_pdp_unit_prices = true
+  endif
 -%}
 
 {% liquid
@@ -54,7 +58,8 @@
   {% render 'price',
     show_unit_price: true,
     product_resource: product_resource,
-    show_sale_price_first: block_settings.show_sale_price_first
+    show_sale_price_first: block_settings.show_sale_price_first,
+    show_pdp_unit_prices: show_pdp_unit_prices
   %}
 
   {% if block_settings.show_tax_info %}
@@ -89,6 +94,75 @@
 </product-price>
 
 {% render 'payment-terms-styles' %}
+
+{% stylesheet %}
+  .pdp-price__sale-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-block-end: var(--padding-sm);
+    padding: var(--padding-2xs) var(--padding-sm);
+    border-radius: var(--style-border-radius-pills);
+    color: var(--color-foreground);
+    background: rgb(var(--color-foreground-rgb) / var(--opacity-10));
+    font-size: var(--font-size--sm);
+    font-weight: 600;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .pdp-price__grid {
+    display: grid;
+    gap: var(--padding-xs);
+  }
+
+  .pdp-price__column {
+    display: grid;
+    grid-template-columns: 7.5rem max-content max-content;
+    min-width: 0;
+    align-items: baseline;
+    gap: var(--padding-xs) var(--padding-md);
+  }
+
+  .pdp-price__label {
+    color: rgb(var(--color-rgb, var(--color-foreground-rgb)) / var(--opacity-subdued-text));
+    font-size: var(--font-size--xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .pdp-price__value {
+    font-size: max(1.25em, var(--font-size--lg));
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .pdp-price__unit {
+    font-size: 0.65em;
+    font-weight: inherit;
+  }
+
+  .pdp-price__compare {
+    font-size: var(--font-size--sm);
+  }
+
+  @media screen and (max-width: 479px) {
+    .pdp-price__column {
+      grid-template-columns: 6.5rem max-content max-content;
+      column-gap: var(--padding-xs);
+    }
+
+    .pdp-price__value {
+      font-size: max(1.1em, var(--font-size--md));
+    }
+
+    .pdp-price__compare {
+      font-size: var(--font-size--xs);
+    }
+  }
+{% endstylesheet %}
 
 {% schema %}
 {

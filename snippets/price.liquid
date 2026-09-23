@@ -5,6 +5,7 @@
   @param {product} product_resource - The product to render
   @param {boolean} [show_unit_price] - Whether to show the unit price
   @param {boolean} [show_sale_price_first] - Whether to show the sale price first
+  @param {boolean} [show_pdp_unit_prices] - Whether to show the PDP's square-metre and tile price rows
 {%- enddoc -%}
 
 {%- liquid
@@ -13,6 +14,13 @@
   assign selected_variant = product_resource.selected_or_first_available_variant
   assign price = selected_variant.price
   assign compare_at_price = selected_variant.compare_at_price
+
+  assign is_main_product_price = false
+  if show_pdp_unit_prices
+    assign is_main_product_price = true
+    assign price_per_m2 = product_resource.metafields.arks.price_per_m2
+    assign compare_price_per_m2 = product_resource.metafields.arks.compare_price_per_m2
+  endif
 
   assign show_compare_price = false
   if compare_at_price > price
@@ -73,7 +81,72 @@
 -%}
 
 <div ref="priceContainer">
-  {% if has_volume_pricing %}
+  {% if is_main_product_price %}
+    {%- liquid
+      if show_compare_price
+        assign sale_saving = selected_variant.compare_at_price | minus: selected_variant.price
+        assign sale_percentage = sale_saving | times: 100.0 | divided_by: selected_variant.compare_at_price | round
+      endif
+
+      if price_per_m2.value != blank
+        assign price_per_m2_cents = price_per_m2.value | times: 100 | round
+        if use_currency
+          assign formatted_price_per_m2 = price_per_m2_cents | money_with_currency
+        else
+          assign formatted_price_per_m2 = price_per_m2_cents | money
+        endif
+      endif
+
+      if compare_price_per_m2.value != blank
+        assign compare_price_per_m2_cents = compare_price_per_m2.value | times: 100 | round
+        if use_currency
+          assign formatted_compare_price_per_m2 = compare_price_per_m2_cents | money_with_currency
+        else
+          assign formatted_compare_price_per_m2 = compare_price_per_m2_cents | money
+        endif
+      endif
+    -%}
+
+    {% if show_compare_price %}
+      <span class="pdp-price__sale-badge">
+        {{ sale_percentage }}% SALE
+      </span>
+    {% endif %}
+
+    <div class="pdp-price__grid">
+      {% if formatted_price_per_m2 != blank %}
+        <div class="pdp-price__column">
+          <span class="pdp-price__label">Price per m²</span>
+          <span class="pdp-price__value price">
+            {{- formatted_price_per_m2 -}}<span class="pdp-price__unit">/m²</span>
+          </span>
+          {% if formatted_compare_price_per_m2 != blank %}
+            <span class="pdp-price__compare">
+              <span class="visually-hidden">Original price per m²: </span>
+              <s class="compare-at-price">
+                {{- formatted_compare_price_per_m2 -}}<span class="pdp-price__unit">/m²</span>
+              </s>
+            </span>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <div class="pdp-price__column">
+        <span class="pdp-price__label">Price per tile</span>
+        <span class="pdp-price__value price">
+          {{- price | default: '&nbsp;' -}}<span class="pdp-price__unit">/tile</span>
+        </span>
+        {% if show_compare_price %}
+          <span class="pdp-price__compare">
+            <span class="visually-hidden">Original price per tile: </span>
+            <s class="compare-at-price">
+              {{- compare_at_price -}}<span class="pdp-price__unit">/tile</span>
+            </s>
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  {% elsif has_volume_pricing %}
     {% comment %} Volume pricing display {% endcomment %}
     {% if show_compare_price %}
       <span class="price-item__group compare-at-price">
@@ -111,7 +184,7 @@
       <span class="price">{{ price | default: '&nbsp;' }}</span>
     {% endif %}
   {% endif %}
-  {%- if selected_variant.unit_price and show_unit_price %}
+  {%- if selected_variant.unit_price and show_unit_price and is_main_product_price == false %}
     {%- liquid
       if use_currency
         assign unit_price = selected_variant.unit_price | money_with_currency

@@ -3,8 +3,8 @@ import { clamp, preventDefault, isMobileBreakpoint } from '@theme/utilities';
 import { Component } from '@theme/component';
 
 const MIN_ZOOM = 1;
-const MAX_ZOOM = 5;
-const DEFAULT_ZOOM = 1.5;
+const MAX_ZOOM = 3;
+const DEFAULT_ZOOM = 1.25;
 const DOUBLE_TAP_DELAY = 300;
 const DOUBLE_TAP_DISTANCE = 50;
 const DRAG_THRESHOLD = 10;
@@ -204,14 +204,14 @@ export class DragZoomWrapper extends Component {
       this.#hasManualZoom = false; // Reset the flag
       this.#translate = { x: 0, y: 0 }; // Center the image
     } else {
-      // Toggle between zoom levels: 1x ↔ 1.5x
+      // Toggle between the minimum and configured default zoom levels
       const tolerance = 0.05; // Small tolerance for floating point comparison
 
       if (Math.abs(this.#scale - MIN_ZOOM) < tolerance) {
-        // Currently at 1x, go to 1.5x
+        // Currently at 1x, go to the default zoom level
         targetZoom = DEFAULT_ZOOM;
       } else {
-        // Currently at 1.5x or any other level, go to 1x
+        // Currently zoomed, go back to 1x
         targetZoom = MIN_ZOOM;
       }
     }

@@ -383,6 +383,22 @@
 
 {% render 'buy-buttons-styles' %}
 
+{% stylesheet %}
+  @media screen and (min-width: 750px) {
+    .product-information .buy-buttons-block {
+      --height-buy-buttons: 52px;
+    }
+
+    .product-information .product-form-buttons > span:has(.add-to-cart-button) {
+      flex: 0 1 15rem;
+    }
+
+    .product-information .product-form-buttons .add-to-cart-button {
+      padding-block: var(--padding-sm);
+    }
+  }
+{% endstylesheet %}
+
 {% schema %}
 {
   "name": "t:names.product_buy_buttons",
