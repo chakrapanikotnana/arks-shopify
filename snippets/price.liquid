@@ -83,11 +83,6 @@
 <div ref="priceContainer">
   {% if is_main_product_price %}
     {%- liquid
-      if show_compare_price
-        assign sale_saving = selected_variant.compare_at_price | minus: selected_variant.price
-        assign sale_percentage = sale_saving | times: 100.0 | divided_by: selected_variant.compare_at_price | round
-      endif
-
       if price_per_m2.value != blank
         assign price_per_m2_cents = price_per_m2.value | times: 100 | round
         if use_currency
@@ -107,24 +102,20 @@
       endif
     -%}
 
-    {% if show_compare_price %}
-      <span class="pdp-price__sale-badge">
-        {{ sale_percentage }}% SALE
-      </span>
-    {% endif %}
-
     <div class="pdp-price__grid">
       {% if formatted_price_per_m2 != blank %}
         <div class="pdp-price__column">
           <span class="pdp-price__label">Price per m²</span>
           <span class="pdp-price__value price">
-            {{- formatted_price_per_m2 -}}<span class="pdp-price__unit">/m²</span>
+            {{- formatted_price_per_m2 -}}
+            <span class="pdp-price__unit">/m²</span>
           </span>
           {% if formatted_compare_price_per_m2 != blank %}
             <span class="pdp-price__compare">
               <span class="visually-hidden">Original price per m²: </span>
               <s class="compare-at-price">
-                {{- formatted_compare_price_per_m2 -}}<span class="pdp-price__unit">/m²</span>
+                {{- formatted_compare_price_per_m2 -}}
+                <span class="pdp-price__unit">/m²</span>
               </s>
             </span>
           {% endif %}
@@ -134,13 +125,15 @@
       <div class="pdp-price__column">
         <span class="pdp-price__label">Price per tile</span>
         <span class="pdp-price__value price">
-          {{- price | default: '&nbsp;' -}}<span class="pdp-price__unit">/tile</span>
+          {{- price | default: '&nbsp;' -}}
+          <span class="pdp-price__unit">/tile</span>
         </span>
         {% if show_compare_price %}
           <span class="pdp-price__compare">
             <span class="visually-hidden">Original price per tile: </span>
             <s class="compare-at-price">
-              {{- compare_at_price -}}<span class="pdp-price__unit">/tile</span>
+              {{- compare_at_price -}}
+              <span class="pdp-price__unit">/tile</span>
             </s>
           </span>
         {% endif %}

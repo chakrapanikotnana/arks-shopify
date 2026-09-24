@@ -1,11 +1,11 @@
-
-
 {%- liquid
   assign block_settings = block.settings
   assign product_resource = closest.product
   assign selected_variant = product_resource.selected_or_first_available_variant
   assign show_pdp_unit_prices = false
   if template.name == 'product' and product_resource.id == product.id
+    assign show_pdp_unit_prices = true
+  elsif template.name == 'index'
     assign show_pdp_unit_prices = true
   endif
 -%}
@@ -96,21 +96,6 @@
 {% render 'payment-terms-styles' %}
 
 {% stylesheet %}
-  .pdp-price__sale-badge {
-    display: inline-flex;
-    align-items: center;
-    width: fit-content;
-    margin-block-end: var(--padding-sm);
-    padding: var(--padding-2xs) var(--padding-sm);
-    border-radius: var(--style-border-radius-pills);
-    color: var(--color-foreground);
-    background: rgb(var(--color-foreground-rgb) / var(--opacity-10));
-    font-size: var(--font-size--sm);
-    font-weight: 600;
-    line-height: 1.4;
-    text-transform: uppercase;
-  }
-
   .pdp-price__grid {
     display: grid;
     gap: var(--padding-xs);
@@ -134,7 +119,7 @@
   }
 
   .pdp-price__value {
-    font-size: max(1.25em, var(--font-size--lg));
+    font-size: var(--font-size--sm);
     font-weight: 600;
     line-height: 1.2;
   }
@@ -145,7 +130,7 @@
   }
 
   .pdp-price__compare {
-    font-size: var(--font-size--sm);
+    font-size: var(--font-size--xs);
   }
 
   @media screen and (max-width: 479px) {
@@ -155,11 +140,11 @@
     }
 
     .pdp-price__value {
-      font-size: max(1.1em, var(--font-size--md));
+      font-size: var(--font-size--xs);
     }
 
     .pdp-price__compare {
-      font-size: var(--font-size--xs);
+      font-size: var(--font-size--2xs);
     }
   }
 {% endstylesheet %}
