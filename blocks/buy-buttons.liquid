@@ -10,6 +10,10 @@
   assign variant = closest.product.selected_or_first_available_variant
   assign inventory_quantity = variant.inventory_quantity
   assign inventory_policy = variant.inventory_policy
+  assign tile_calculator_active = false
+  if product.metafields.arks.tiles_per_box.value > 0 and product.metafields.arks.tiles_per_m2.value > 0 and product.metafields.arks.price_per_m2.value > 0
+    assign tile_calculator_active = true
+  endif
 
   if variant.inventory_management == 'shopify'
     assign inventory_managed = true
@@ -37,7 +41,7 @@
 %}
 
 <span
-  class="buy-buttons-block buy-buttons-block--{{ block.id }}"
+  class="buy-buttons-block buy-buttons-block--{{ block.id }}{% if tile_calculator_active %} buy-buttons-block--tile{% endif %}"
   {% if block_settings.text_color != blank %}
     style="--color: {{ block_settings.text_color }}; --color-rgb: {{ block_settings.text_color.rgb  }}"
   {% endif %}
@@ -72,7 +76,7 @@
           <span class="buy-buttons-block__bar">
         {%- endif -%}
         <div
-          class="product-form-buttons spacing-style{% if block_settings.stacking %} product-form-buttons--stacked{% endif %}"
+          class="product-form-buttons spacing-style{% if block_settings.stacking %} product-form-buttons--stacked{% endif %}{% if tile_calculator_active %} product-form-buttons--tile{% endif %}"
           style="{% render 'spacing-style', settings: block_settings %}"
           ref="productFormButtons"
         >
@@ -384,17 +388,137 @@
 {% render 'buy-buttons-styles' %}
 
 {% stylesheet %}
+  .product-information .buy-buttons-block--tile {
+    container-type: inline-size;
+    display: block;
+  }
+
+  .product-information .product-form-buttons--tile {
+    --height-buy-buttons: 44px;
+
+    align-items: end;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 100px 150px 105px 145px;
+    justify-content: start;
+  }
+
+  .product-information .product-form-buttons--tile :is(
+    .tile-area-calculator__input,
+    .tile-area-calculator__input input,
+    .tile-area-calculator__summary > div,
+    .add-to-cart-block,
+    .add-to-cart-button
+  ) {
+    box-sizing: border-box;
+  }
+
+  .product-information .product-form-buttons--tile > .tile-area-calculator {
+    display: contents;
+    min-width: 0;
+    width: auto;
+  }
+
+  .product-information .product-form-buttons--tile .tile-area-calculator__controls,
+  .product-information .product-form-buttons--tile .tile-area-calculator__summary {
+    display: contents;
+  }
+
+  .product-information .product-form-buttons--tile .tile-area-calculator__input,
+  .product-information .product-form-buttons--tile .tile-area-calculator__summary > div {
+    max-width: none;
+    min-width: 0;
+    width: auto;
+  }
+
+  .product-information .product-form-buttons--tile .tile-area-calculator__input label,
+  .product-information .product-form-buttons--tile .tile-area-calculator__summary dt {
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .product-information .product-form-buttons--tile .tile-area-calculator__input,
+  .product-information .product-form-buttons--tile .tile-area-calculator__summary > div {
+    padding: 8px;
+  }
+
+  .product-information .product-form-buttons--tile .tile-area-calculator__input input,
+  .product-information .product-form-buttons--tile .tile-area-calculator__summary dd {
+    font-size: 16px;
+    font-weight: 600;
+    height: auto;
+    line-height: 1.2;
+    min-height: 0;
+  }
+
+  .product-information .product-form-buttons--tile > .add-to-cart-block {
+    align-self: flex-end;
+    min-width: 0;
+    order: 1;
+    width: auto;
+  }
+
+  .product-information .product-form-buttons--tile .add-to-cart-button {
+    font-size: 14px;
+    height: var(--height-buy-buttons);
+    min-height: var(--height-buy-buttons);
+    padding-block: 0;
+    padding-inline: 8px;
+  }
+
+  .product-information .product-form-buttons--tile .add-to-cart-icon {
+    flex: 0 0 18px;
+    height: 18px;
+    width: 18px;
+  }
+
+  .product-information .product-form-buttons--tile .add-to-cart-icon svg {
+    height: 100%;
+    width: 100%;
+  }
+
+  .product-information .product-form-buttons--tile [data-calculator-error] {
+    grid-column: 1 / -1;
+    order: 2;
+  }
+
+  .product-information .product-form-buttons--tile > .accelerated-checkout-block {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
   @media screen and (min-width: 750px) {
-    .product-information .buy-buttons-block {
+    .product-information .buy-buttons-block:not(.buy-buttons-block--tile) {
       --height-buy-buttons: 52px;
     }
 
-    .product-information .product-form-buttons > span:has(.add-to-cart-button) {
+    .product-information .product-form-buttons:not(.product-form-buttons--tile) > span:has(.add-to-cart-button) {
       flex: 0 1 15rem;
     }
 
-    .product-information .product-form-buttons .add-to-cart-button {
+    .product-information .product-form-buttons:not(.product-form-buttons--tile) .add-to-cart-button {
       padding-block: var(--padding-sm);
+    }
+  }
+
+  @container (max-width: 523.98px) {
+    .product-information .product-form-buttons--tile {
+      grid-template-columns: 100px 150px;
+    }
+  }
+
+  @container (max-width: 479px) {
+    .product-information .product-form-buttons--tile {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .product-information .product-form-buttons--tile .tile-area-calculator__input {
+      grid-column: 1 / -1;
+    }
+
+    .product-information .product-form-buttons--tile > .add-to-cart-block {
+      grid-column: 1 / -1;
+      width: 100%;
     }
   }
 {% endstylesheet %}

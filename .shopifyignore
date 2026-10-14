@@ -1,0 +1,8 @@
+# Non-theme documentation and verification artifacts
+TILE_AREA_ORDERING.md
+admin/**
+tests/**
+
+# Inactive app/function prototypes retained locally for reference
+tile-ordering-app/**
+tile-ordering-backend/**

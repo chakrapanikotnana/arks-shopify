@@ -142,6 +142,33 @@
 
           <tbody role="rowgroup">
             {% for item in cart.items %}
+              {%- liquid
+                assign is_tile_product = false
+                if item.product.metafields.arks.tiles_per_box.value > 0 and item.product.metafields.arks.tiles_per_m2.value > 0 and item.product.metafields.arks.price_per_m2.value > 0
+                  assign is_tile_product = true
+                endif
+
+                if is_tile_product
+                  assign pack_coverage_m2 = item.product.metafields.arks.tiles_per_box.value | divided_by: item.product.metafields.arks.tiles_per_m2.value | round: 2
+                  assign supplied_m2 = item.quantity | times: pack_coverage_m2 | round: 2
+                  assign supplied_m2_parts = supplied_m2 | append: '' | split: '.'
+                  capture formatted_supplied_m2
+                    echo supplied_m2_parts[0]
+                    echo '.'
+                    if supplied_m2_parts.size == 1
+                      echo '00'
+                    elsif supplied_m2_parts[1].size == 1
+                      echo supplied_m2_parts[1]
+                      echo '0'
+                    else
+                      echo supplied_m2_parts[1]
+                    endif
+                  endcapture
+
+                  assign public_price_per_m2 = item.product.metafields.arks.price_per_m2.value | times: 100 | round
+                  assign public_compare_per_m2 = item.product.metafields.arks.compare_price_per_m2.value | times: 100 | round
+                endif
+              -%}
               <tr
                 id="CartItem-{{ item.key }}"
                 role="row"
@@ -233,6 +260,7 @@
                     {%- if item.product.has_only_default_variant == false
                       or item.properties.size != 0
                       or item.selling_plan_allocation != null
+                      or is_tile_product
                     -%}
                       {%- if item.product.has_only_default_variant == false and item.item_components.size == 0 -%}
                         <dl class="cart-items__variants">
@@ -250,13 +278,15 @@
 
                       {%- liquid
                         assign has_visible_properties = false
-                        for property in item.properties
-                          assign property_first_char = property.first | slice: 0
-                          if property.last != blank and property_first_char != '_'
-                            assign has_visible_properties = true
-                            break
-                          endif
-                        endfor
+                        unless is_tile_product
+                          for property in item.properties
+                            assign property_first_char = property.first | slice: 0
+                            if property.last != blank and property_first_char != '_'
+                              assign has_visible_properties = true
+                              break
+                            endif
+                          endfor
+                        endunless
                       -%}
                       {%- if has_visible_properties -%}
                         <dl class="cart-items__properties">
@@ -272,6 +302,28 @@
                                     {{ property.last }}
                                   {%- endif -%}
                                 </dd>
+                              </div>
+                            {%- endif -%}
+                          {%- endfor -%}
+                        </dl>
+                      {%- endif -%}
+
+                      {%- if is_tile_product -%}
+                        <dl class="cart-items__properties cart-items__tile-summary">
+                          <div class="cart-items__property">
+                            <dt>Packs:</dt>
+                            <dd>{{ item.quantity }} ({{ formatted_supplied_m2 | strip }} m²)</dd>
+                          </div>
+                          {%- for property in item.properties -%}
+                            {%- assign property_first_char = property.first | slice: 0 -%}
+                            {%- if property.last != blank
+                              and property_first_char != '_'
+                              and property.first != 'Required area'
+                              and property.first != 'Packs supplied'
+                            -%}
+                              <div class="cart-items__property">
+                                <dt>{{ property.first }}:</dt>
+                                <dd>{{ property.last }}</dd>
                               </div>
                             {%- endif -%}
                           {%- endfor -%}
@@ -297,9 +349,17 @@
 
                   <div class="cart-items__unit-price-wrapper">
                     <div>
-                      {% if item.original_price != item.final_price %}
+                      {% if is_tile_product %}
+                        <span>{{ public_price_per_m2 | money }}/m²</span>
+                        {% if public_compare_per_m2 > public_price_per_m2 %}
+                          <s class="compare-at-price">{{ public_compare_per_m2 | money }}/m²</s>
+                        {% endif %}
+                      {% elsif item.original_price != item.final_price %}
                         <span class="visually-hidden">{{ 'content.price_sale' | t }}</span>
-                        <span>{{ item.final_price | money }}</span>
+                        <span>
+                          {{ item.final_price | money }}
+                          {% if is_tile_product %}/m²{% endif %}
+                        </span>
                         <span class="visually-hidden">{{ 'content.price_regular' | t }}</span>
                         <s class="compare-at-price">
                           {% if item.variant.compare_at_price > item.original_price %}
@@ -307,6 +367,7 @@
                           {% else %}
                             {{ item.original_price | money }}
                           {% endif %}
+                          {% if is_tile_product %}/m²{% endif %}
                         </s>
                       {% else %}
                         {% if item.variant.compare_at_price > item.original_price %}
@@ -315,11 +376,17 @@
                           <span class="visually-hidden">{{ 'content.price' | t }}</span>
                         {% endif %}
 
-                        <span>{{ item.original_price | money }}</span>
+                        <span>
+                          {{ item.original_price | money }}
+                          {% if is_tile_product %}/m²{% endif %}
+                        </span>
 
                         {% if item.variant.compare_at_price > item.original_price %}
                           <span class="visually-hidden">{{ 'content.price_regular' | t }}</span>
-                          <s class="compare-at-price">{{ item.variant.compare_at_price | money }}</s>
+                          <s class="compare-at-price">
+                            {{ item.variant.compare_at_price | money }}
+                            {% if is_tile_product %}/m²{% endif %}
+                          </s>
                         {% endif %}
                       {% endif %}
                     </div>
@@ -334,6 +401,13 @@
                   {% assign can_update_quantity = item.instructions.can_update_quantity
                     | default: true, allow_false: true
                   %}
+                  {% assign quantity_input_label = 'Quantity' %}
+                  {% if is_tile_product %}
+                    {% assign quantity_input_label = 'Packs' %}
+                  {% endif %}
+                  <span class="cart-items__quantity-label">
+                    {% if is_tile_product %}Packs{% else %}Quantity{% endif %}
+                  </span>
                   <div class="cart-items__quantity-controls">
                     {% render 'volume-pricing-info',
                       variant: item.variant,
@@ -347,7 +421,8 @@
                       in_cart_quantity: item.quantity,
                       line_index: item.index,
                       class: 'cart-primary-typography',
-                      can_update_quantity: can_update_quantity
+                      can_update_quantity: can_update_quantity,
+                      quantity_label: quantity_input_label
                     %}
 
                     <button
@@ -398,8 +473,11 @@
                   role="cell"
                   headers="productTotal"
                 >
+                  {% if is_tile_product %}
+                    <span class="cart-items__line-total-label">Line total</span>
+                  {% endif %}
                   <text-component value="{{ price | strip_html }}">{{ price }}</text-component>
-                  {%- if item.unit_price_measurement -%}
+                  {%- if item.unit_price_measurement and is_tile_product == false -%}
                     <div class="cart-items__price-unit cart-secondary-typography">
                       {% render 'unit-price', price: unit_price, measurement: item.unit_price_measurement %}
                     </div>
@@ -660,6 +738,13 @@
     justify-content: flex-start;
     gap: var(--gap-xs);
     width: fit-content;
+    flex-wrap: wrap;
+  }
+
+  .cart-items__quantity-label {
+    flex-basis: 100%;
+    font-size: var(--font-size--xs);
+    font-weight: 600;
   }
 
   .cart-items__quantity-controls {
@@ -703,6 +788,12 @@
     display: block;
     font-size: var(--font-size--sm);
     line-height: var(--line-height);
+  }
+
+  .cart-items__line-total-label {
+    display: block;
+    font-size: var(--font-size--xs);
+    font-weight: 600;
   }
 
   .cart-items__price-unit {

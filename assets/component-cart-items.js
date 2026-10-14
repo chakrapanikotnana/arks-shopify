@@ -312,9 +312,7 @@ export class CartItemsComponent extends createViewEventElement(Component) {
     const quantitySelector = this.refs.quantitySelectors[line - 1];
     const quantityInput = quantitySelector?.querySelector('input');
 
-    if (!quantityInput) throw new Error('Quantity input not found');
-
-    quantityInput.value = quantityInput.defaultValue;
+    if (quantityInput) quantityInput.value = quantityInput.defaultValue;
 
     const cartItemError = this.refs[`cartItemError-${line}`];
     const cartItemErrorContainer = this.refs[`cartItemErrorContainer-${line}`];

@@ -5,26 +5,59 @@
   @param {product} product_resource - The product to render
   @param {boolean} [show_unit_price] - Whether to show the unit price
   @param {boolean} [show_sale_price_first] - Whether to show the sale price first
-  @param {boolean} [show_pdp_unit_prices] - Whether to show the PDP's square-metre and tile price rows
+  @param {boolean} [show_pdp_unit_prices] - Whether to show the PDP's square-metre and pack price rows
 {%- enddoc -%}
 
 {%- liquid
   assign show_unit_price = show_unit_price | default: false
   assign show_sale_price_first = show_sale_price_first | default: false
   assign selected_variant = product_resource.selected_or_first_available_variant
-  assign price = selected_variant.price
-  assign compare_at_price = selected_variant.compare_at_price
+  assign native_price = selected_variant.price
+  assign native_compare_at_price = selected_variant.compare_at_price
+  assign price = native_price
+  assign compare_at_price = native_compare_at_price
+
+  assign is_tile_product = false
+  assign uses_public_m2_price = false
+  if product_resource.metafields.arks.tiles_per_box.value > 0 and product_resource.metafields.arks.tiles_per_m2.value > 0 and product_resource.metafields.arks.price_per_m2.value > 0
+    assign is_tile_product = true
+  endif
+
+  # A native pack variant is priced per pack in Shopify. Keep the public unit
+  # rate independent from the sellable unit and never fall back to arks.price.
+  if is_tile_product and product_resource.metafields.arks.price_per_m2.value != blank
+    assign uses_public_m2_price = true
+    assign price_per_m2 = product_resource.metafields.arks.price_per_m2.value | times: 100 | round
+    if product_resource.metafields.arks.compare_price_per_m2.value != blank
+      assign compare_price_per_m2 = product_resource.metafields.arks.compare_price_per_m2.value | times: 100 | round
+    endif
+  endif
 
   assign is_main_product_price = false
-  if show_pdp_unit_prices
+  if show_pdp_unit_prices and is_tile_product
     assign is_main_product_price = true
-    assign price_per_m2 = product_resource.metafields.arks.price_per_m2
-    assign compare_price_per_m2 = product_resource.metafields.arks.compare_price_per_m2
   endif
+
+  unless is_main_product_price
+    if uses_public_m2_price
+      assign price = price_per_m2
+      assign compare_at_price = compare_price_per_m2
+    endif
+  endunless
 
   assign show_compare_price = false
   if compare_at_price > price
     assign show_compare_price = true
+  endif
+
+  assign show_compare_price_per_m2 = false
+  if uses_public_m2_price and compare_price_per_m2 > price_per_m2
+    assign show_compare_price_per_m2 = true
+  endif
+
+  assign show_compare_price_per_pack = false
+  if native_compare_at_price > native_price
+    assign show_compare_price_per_pack = true
   endif
 
   if product_resource == blank
@@ -70,11 +103,23 @@
   if use_currency
     assign price = price | money_with_currency
     assign compare_at_price = compare_at_price | money_with_currency
+    assign formatted_native_price = native_price | money_with_currency
+    assign formatted_native_compare_at_price = native_compare_at_price | money_with_currency
+    if uses_public_m2_price
+      assign formatted_price_per_m2 = price_per_m2 | money_with_currency
+      assign formatted_compare_price_per_m2 = compare_price_per_m2 | money_with_currency
+    endif
     assign price_min = price_min | money_with_currency
     assign price_max = price_max | money_with_currency
   else
     assign price = price | money
     assign compare_at_price = compare_at_price | money
+    assign formatted_native_price = native_price | money
+    assign formatted_native_compare_at_price = native_compare_at_price | money
+    if uses_public_m2_price
+      assign formatted_price_per_m2 = price_per_m2 | money
+      assign formatted_compare_price_per_m2 = compare_price_per_m2 | money
+    endif
     assign price_min = price_min | money
     assign price_max = price_max | money
   endif
@@ -82,35 +127,15 @@
 
 <div ref="priceContainer">
   {% if is_main_product_price %}
-    {%- liquid
-      if price_per_m2.value != blank
-        assign price_per_m2_cents = price_per_m2.value | times: 100 | round
-        if use_currency
-          assign formatted_price_per_m2 = price_per_m2_cents | money_with_currency
-        else
-          assign formatted_price_per_m2 = price_per_m2_cents | money
-        endif
-      endif
-
-      if compare_price_per_m2.value != blank
-        assign compare_price_per_m2_cents = compare_price_per_m2.value | times: 100 | round
-        if use_currency
-          assign formatted_compare_price_per_m2 = compare_price_per_m2_cents | money_with_currency
-        else
-          assign formatted_compare_price_per_m2 = compare_price_per_m2_cents | money
-        endif
-      endif
-    -%}
-
     <div class="pdp-price__grid">
-      {% if formatted_price_per_m2 != blank %}
+      {% if uses_public_m2_price %}
         <div class="pdp-price__column">
           <span class="pdp-price__label">Price per m²</span>
           <span class="pdp-price__value price">
             {{- formatted_price_per_m2 -}}
             <span class="pdp-price__unit">/m²</span>
           </span>
-          {% if formatted_compare_price_per_m2 != blank %}
+          {% if show_compare_price_per_m2 %}
             <span class="pdp-price__compare">
               <span class="visually-hidden">Original price per m²: </span>
               <s class="compare-at-price">
@@ -121,20 +146,13 @@
           {% endif %}
         </div>
       {% endif %}
-
       <div class="pdp-price__column">
-        <span class="pdp-price__label">Price per tile</span>
-        <span class="pdp-price__value price">
-          {{- price | default: '&nbsp;' -}}
-          <span class="pdp-price__unit">/tile</span>
-        </span>
-        {% if show_compare_price %}
+        <span class="pdp-price__label">Price per pack</span>
+        <span class="pdp-price__value price">{{- formatted_native_price | default: '&nbsp;' -}}</span>
+        {% if show_compare_price_per_pack %}
           <span class="pdp-price__compare">
-            <span class="visually-hidden">Original price per tile: </span>
-            <s class="compare-at-price">
-              {{- compare_at_price -}}
-              <span class="pdp-price__unit">/tile</span>
-            </s>
+            <span class="visually-hidden">Original price per pack: </span>
+            <s class="compare-at-price">{{- formatted_native_compare_at_price -}}</s>
           </span>
         {% endif %}
       </div>
@@ -157,24 +175,24 @@
       {% if show_sale_price_first %}
         <span class="price-item__group price">
           <span class="visually-hidden">{{ 'content.price_sale' | t }}&nbsp;</span>
-          {{ price | default: '&nbsp;' }}
+          {{ price | default: '&nbsp;' }}{% if uses_public_m2_price %}<span class="pdp-price__unit">/m²</span>{% endif %}
         </span>
         <span class="price-item__group price-item--regular compare-at-price">
           <span class="visually-hidden">{{ 'content.price_regular' | t }}&nbsp;</span>
-          {{- compare_at_price -}}
+          {{- compare_at_price -}}{% if uses_public_m2_price %}<span class="pdp-price__unit">/m²</span>{% endif %}
         </span>
       {% else %}
         <span class="price-item__group price-item--regular compare-at-price">
           <span class="visually-hidden">{{ 'content.price_regular' | t }}&nbsp;</span>
-          {{- compare_at_price -}}
+          {{- compare_at_price -}}{% if uses_public_m2_price %}<span class="pdp-price__unit">/m²</span>{% endif %}
         </span>
         <span class="price-item__group price">
           <span class="visually-hidden">{{ 'content.price_sale' | t }}&nbsp;</span>
-          {{ price | default: '&nbsp;' }}
+          {{ price | default: '&nbsp;' }}{% if uses_public_m2_price %}<span class="pdp-price__unit">/m²</span>{% endif %}
         </span>
       {% endif %}
     {% else %}
-      <span class="price">{{ price | default: '&nbsp;' }}</span>
+      <span class="price">{{ price | default: '&nbsp;' }}{% if uses_public_m2_price %}<span class="pdp-price__unit">/m²</span>{% endif %}</span>
     {% endif %}
   {% endif %}
   {%- if selected_variant.unit_price and show_unit_price and is_main_product_price == false %}
