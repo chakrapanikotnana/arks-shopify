@@ -12,7 +12,10 @@
   assign is_main_product_inventory = false
   if template.name == 'product' and closest.product.id == product.id
     assign is_main_product_inventory = true
-    assign available_m2 = closest.product.metafields.arks.avaialable
+  endif
+  assign is_tile_product = false
+  if closest.product.metafields.arks.tiles_per_box.value > 0 and closest.product.metafields.arks.tiles_per_m2.value > 0 and closest.product.metafields.arks.price_per_m2.value > 0
+    assign is_tile_product = true
   endif
 
   if inventory_managed
@@ -79,34 +82,6 @@
   data-product-id="{{ product.id }}"
 >
   {% if is_main_product_inventory %}
-    {%- liquid
-      assign show_tile_count = false
-      assign show_available_m2 = false
-      if inventory_managed and inventory_quantity > 0
-        assign show_tile_count = true
-        assign show_available_m2 = true
-      elsif inventory_managed != true and status != 'out_of_stock'
-        assign show_available_m2 = true
-      endif
-
-      if available_m2.value != blank
-        assign available_m2_rounded = available_m2.value | times: 1.0 | round: 2
-        assign available_m2_parts = available_m2_rounded | split: '.'
-        capture formatted_available_m2
-          echo available_m2_parts[0]
-          echo '.'
-          if available_m2_parts.size == 1
-            echo '00'
-          elsif available_m2_parts[1].size == 1
-            echo available_m2_parts[1]
-            echo '0'
-          else
-            echo available_m2_parts[1]
-          endif
-        endcapture
-      endif
-    -%}
-
     <span class="product-inventory__status pdp-stock">
       <span
         class="svg-wrapper product-inventory__icon product-inventory__icon-{{ status }}"
@@ -121,13 +96,12 @@
         aria-label="{{ 'accessibility.inventory_status' | t }}"
       >
         <strong class="pdp-stock__status">{{ translation_key | t }}</strong>
-        {% if status != 'out_of_stock' and show_tile_count %}
+        {% if is_tile_product %}
           <span class="pdp-stock__separator" aria-hidden="true">|</span>
-          <span>Available tiles: {{ inventory_quantity }}</span>
-        {% endif %}
-        {% if show_available_m2 and formatted_available_m2 != blank %}
+          <span>Available packs: {{ inventory_quantity }}</span>
+        {% elsif is_tile_product == false and show_quantity %}
           <span class="pdp-stock__separator" aria-hidden="true">|</span>
-          <span>Available m²: {{ formatted_available_m2 }}</span>
+          <span>{{ 'content.inventory_low_stock_show_count' | t: count: inventory_quantity }}</span>
         {% endif %}
       </span>
     </span>

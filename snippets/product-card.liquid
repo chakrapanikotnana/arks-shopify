@@ -27,6 +27,8 @@
     assign has_quick_add = true
   endif
 
+  assign card_variant = product.selected_or_first_available_variant
+
   assign has_mobile_quick_add = false
   if has_quick_add and settings.mobile_quick_add
     assign has_mobile_quick_add = true
@@ -36,7 +38,7 @@
   assign product_card_gap_value = product_card_gap | default: block_settings.product_card_gap
 
   # variant_to_link drives the featured image used by the main-product view transition.
-  assign variant_to_link = product.selected_or_first_available_variant
+  assign variant_to_link = card_variant
 
   if settings.transition_to_main_product
     assign featured_image = variant_to_link.featured_image

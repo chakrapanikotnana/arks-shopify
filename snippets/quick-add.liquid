@@ -12,6 +12,10 @@
   assign choose_options_text = 'actions.choose' | t
   # Logic to determine which variant to use (matching swatch selection logic from product-card)
   assign variant = product.selected_or_first_available_variant
+  assign is_tile_product = false
+  if product.metafields.arks.tiles_per_box.value > 0 and product.metafields.arks.tiles_per_m2.value > 0 and product.metafields.arks.price_per_m2.value > 0
+    assign is_tile_product = true
+  endif
 
   assign uses_selling_plans = false
   if product.requires_selling_plan or product.selling_plan_groups.size > 0
@@ -50,6 +54,14 @@
   endif
 
   if uses_selling_plans
+    assign initial_button = 'choose'
+    assign render_add = false
+    assign render_choose = true
+  endif
+
+  # Native-pack tiles open the product modal so they use the same required-area
+  # calculator and product form as the PDP. Never expose the direct one-pack add.
+  if is_tile_product
     assign initial_button = 'choose'
     assign render_add = false
     assign render_choose = true
