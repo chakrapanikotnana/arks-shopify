@@ -106,6 +106,7 @@
     {% if settings.carousel_on_mobile and settings.layout_type != 'carousel' %}
       hidden--mobile
     {% endif %}
+    {% if content_type == 'products' %}resource-list--products{% endif %}
     {{ resource_list_classes }}
   "
   style="{{ resource_list_styles }}"
@@ -155,6 +156,7 @@
       resource-list
       hidden--desktop
       resource-list__carousel
+      {% if content_type == 'products' %}resource-list--products{% endif %}
       force-full-width
     "
     style="

@@ -6,6 +6,7 @@
   @param {boolean} [show_unit_price] - Whether to show the unit price
   @param {boolean} [show_sale_price_first] - Whether to show the sale price first
   @param {boolean} [show_pdp_unit_prices] - Whether to show the PDP's square-metre and pack price rows
+  @param {boolean} [show_product_card_unit_prices] - Whether to show direct square-metre metafield prices and native pack prices on a product card
 {%- enddoc -%}
 
 {%- liquid
@@ -21,6 +22,17 @@
   assign uses_public_m2_price = false
   if product_resource.metafields.arks.tiles_per_box.value > 0 and product_resource.metafields.arks.tiles_per_m2.value > 0 and product_resource.metafields.arks.price_per_m2.value > 0
     assign is_tile_product = true
+  endif
+
+  assign show_product_card_dual_price = false
+  if show_product_card_unit_prices and product_resource.metafields.arks.price_per_m2.value != blank and product_resource.metafields.arks.price_per_m2.value > 0 and native_price != blank
+    assign show_product_card_dual_price = true
+    # number_decimal metafields are major currency values, unlike native variant
+    # prices, which are already in Shopify money-filter units.
+    assign card_price_per_m2 = product_resource.metafields.arks.price_per_m2.value | times: 100 | round
+    if product_resource.metafields.arks.compare_price_per_m2.value != blank
+      assign card_compare_price_per_m2 = product_resource.metafields.arks.compare_price_per_m2.value | times: 100 | round
+    endif
   endif
 
   # A native pack variant is priced per pack in Shopify. Keep the public unit
@@ -105,6 +117,10 @@
     assign compare_at_price = compare_at_price | money_with_currency
     assign formatted_native_price = native_price | money_with_currency
     assign formatted_native_compare_at_price = native_compare_at_price | money_with_currency
+    if show_product_card_dual_price
+      assign formatted_card_price_per_m2 = card_price_per_m2 | money_with_currency
+      assign formatted_card_compare_price_per_m2 = card_compare_price_per_m2 | money_with_currency
+    endif
     if uses_public_m2_price
       assign formatted_price_per_m2 = price_per_m2 | money_with_currency
       assign formatted_compare_price_per_m2 = compare_price_per_m2 | money_with_currency
@@ -116,6 +132,10 @@
     assign compare_at_price = compare_at_price | money
     assign formatted_native_price = native_price | money
     assign formatted_native_compare_at_price = native_compare_at_price | money
+    if show_product_card_dual_price
+      assign formatted_card_price_per_m2 = card_price_per_m2 | money
+      assign formatted_card_compare_price_per_m2 = card_compare_price_per_m2 | money
+    endif
     if uses_public_m2_price
       assign formatted_price_per_m2 = price_per_m2 | money
       assign formatted_compare_price_per_m2 = compare_price_per_m2 | money
@@ -126,7 +146,46 @@
 -%}
 
 <div ref="priceContainer">
-  {% if is_main_product_price %}
+  {% if show_product_card_dual_price %}
+    <div class="pdp-price__grid product-card-price__grid">
+      <div class="product-card-price__row product-card-price__row--primary">
+        <span class="product-card-price__label">Price per m²:</span>
+        <span class="pdp-price__value price">
+          {{- formatted_card_price_per_m2 -}}
+          <span class="pdp-price__unit">/ m²</span>
+        </span>
+        {% if card_compare_price_per_m2 > card_price_per_m2 %}
+          <span class="pdp-price__compare">
+            <span class="visually-hidden">Original price per m²: </span>
+            <s class="compare-at-price">
+              {{- formatted_card_compare_price_per_m2 -}}
+              <span class="pdp-price__unit">/ m²</span>
+            </s>
+          </span>
+        {% else %}
+          <span class="product-card-price__compare-placeholder" aria-hidden="true"></span>
+        {% endif %}
+      </div>
+      <div class="product-card-price__row product-card-price__row--secondary">
+        <span class="product-card-price__label">Price per pack:</span>
+        <span class="pdp-price__value price">
+          {{- formatted_native_price | default: '&nbsp;' -}}
+          <span class="pdp-price__unit">/ pack</span>
+        </span>
+        {% if show_compare_price_per_pack %}
+          <span class="pdp-price__compare">
+            <span class="visually-hidden">Original price per pack: </span>
+            <s class="compare-at-price">
+              {{- formatted_native_compare_at_price -}}
+              <span class="pdp-price__unit">/ pack</span>
+            </s>
+          </span>
+        {% else %}
+          <span class="product-card-price__compare-placeholder" aria-hidden="true"></span>
+        {% endif %}
+      </div>
+    </div>
+  {% elsif is_main_product_price %}
     <div class="pdp-price__grid">
       {% if uses_public_m2_price %}
         <div class="pdp-price__column">
@@ -195,7 +254,7 @@
       <span class="price">{{ price | default: '&nbsp;' }}{% if uses_public_m2_price %}<span class="pdp-price__unit">/m²</span>{% endif %}</span>
     {% endif %}
   {% endif %}
-  {%- if selected_variant.unit_price and show_unit_price and is_main_product_price == false %}
+  {%- if selected_variant.unit_price and show_unit_price and is_main_product_price == false and show_product_card_dual_price == false %}
     {%- liquid
       if use_currency
         assign unit_price = selected_variant.unit_price | money_with_currency

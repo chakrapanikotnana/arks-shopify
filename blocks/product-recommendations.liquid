@@ -130,6 +130,7 @@
           {% if block_settings.carousel_on_mobile and block_settings.layout_type != 'carousel' %}
             hidden--mobile
           {% endif %}
+          resource-list--products
           {{ classes }}
         "
         {% if block_settings.layout_type == 'grid' %}
@@ -157,6 +158,7 @@
         <div
           class="
             resource-list
+            resource-list--products
             hidden--desktop
             force-full-width
           "

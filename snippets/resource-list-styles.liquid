@@ -84,4 +84,35 @@
     color: var(--color-foreground);
     text-decoration: none;
   }
+
+  /* Product lists share one responsive column system across grids and carousels. */
+  .resource-list--products:has(.product-card[data-card-context='collection']) {
+    --consistent-product-columns: 2;
+  }
+
+  .resource-list--products:has(.product-card[data-card-context='collection']) .resource-list__item {
+    min-width: 0;
+  }
+
+  .resource-list--products.resource-list--grid:has(.product-card[data-card-context='collection']) {
+    grid-template-columns: repeat(var(--consistent-product-columns), minmax(0, 1fr));
+  }
+
+  @media screen and (max-width: 479px) {
+    .resource-list--products:has(.product-card[data-card-context='collection']) {
+      --consistent-product-columns: 1;
+    }
+  }
+
+  @media screen and (min-width: 750px) {
+    .resource-list--products:has(.product-card[data-card-context='collection']) {
+      --consistent-product-columns: 3;
+    }
+  }
+
+  @media screen and (min-width: 990px) {
+    .resource-list--products:has(.product-card[data-card-context='collection']) {
+      --consistent-product-columns: 4;
+    }
+  }
 {% endstylesheet %}

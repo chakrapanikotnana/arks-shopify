@@ -119,3 +119,37 @@ export function calculateOrderableArea({ coverageM2, tilesPerBox, tilesPerM2, av
   return formatArea(BigInt(packs) * coverage.numerator, coverage.denominator);
 }
 
+/**
+ * Converts the calculator element's data attributes and area input into the
+ * values rendered on the PDP and submitted to Shopify.
+ */
+export function createTileCalculatorState(dataset, requestedM2) {
+  const coverage = resolveCoverage({
+    coverageM2: dataset.packCoverageM2,
+    tilesPerBox: dataset.tilesPerBox,
+    tilesPerM2: dataset.tilesPerM2,
+  });
+  const coverageM2 = coverage ? formatArea(coverage.numerator, coverage.denominator) : '';
+  const result = calculateTileOrder({
+    requestedM2,
+    coverageM2,
+    packPriceMinor: dataset.packPriceMinor,
+    availablePacks: dataset.availablePacks,
+    reservedPacks: dataset.reservedPacks,
+    continueSelling: dataset.continueSelling === 'true',
+  });
+
+  return {
+    coverage,
+    result,
+    quantity: result.valid && !result.insufficientStock ? String(result.packs) : '1',
+  };
+}
+
+/** Copy the server-rendered calculator inputs used after a variant change. */
+export function syncTileCalculatorDataAttributes(target, source) {
+  for (const attribute of source.attributes) {
+    if (attribute.name.startsWith('data-')) target.setAttribute(attribute.name, attribute.value);
+  }
+}
+

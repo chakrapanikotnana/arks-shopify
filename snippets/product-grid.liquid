@@ -78,6 +78,12 @@
       padding-block-end: var(--zoom-out-padding-block-end, 0);
     }
   }
+
+  @media screen and (max-width: 479px) {
+    .product-grid.product-grid--grid:has(.product-card[data-card-context='collection']) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
 {% endstyle %}
 <div
   id="ResultsList"
@@ -212,6 +218,18 @@
       --product-grid-gap: var(--product-grid-gap-desktop);
 
       grid-template-columns: var(--product-grid-columns-desktop);
+    }
+  }
+
+  @media screen and (min-width: 750px) {
+    .product-grid.product-grid--grid:has(.product-card[data-card-context='collection']) {
+      --product-grid-columns-desktop: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media screen and (min-width: 990px) {
+    .product-grid.product-grid--grid:has(.product-card[data-card-context='collection']) {
+      --product-grid-columns-desktop: repeat(4, minmax(0, 1fr));
     }
   }
 

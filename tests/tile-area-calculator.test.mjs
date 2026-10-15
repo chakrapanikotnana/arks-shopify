@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import {
   calculateTileOrder,
   calculateOrderableArea,
+  createTileCalculatorState,
   formatArea,
   resolveCoverage,
+  syncTileCalculatorDataAttributes,
 } from '../assets/tile-area-calculator-core.js';
 
 const example = {
@@ -154,4 +156,66 @@ test('recalculates price and stock inputs supplied by a variant change', () => {
 
 test('102 packs expose 146.88 m² as orderable availability', () => {
   assert.equal(calculateOrderableArea({ coverageM2: '1.44', availablePacks: 102 }), '146.88');
+});
+
+test('ARKS5393 calculator data flows from initial render through variant and area changes', () => {
+  const initialDataset = {
+    packCoverageM2: '1.44',
+    tilesPerBox: '4',
+    tilesPerM2: '2.78',
+    packPriceMinor: '2807',
+    availablePacks: '102',
+    reservedPacks: '0',
+    continueSelling: 'false',
+  };
+
+  const initial = createTileCalculatorState(initialDataset, '1');
+  assert.equal(initial.result.coverageM2, '1.44');
+  assert.equal(initial.result.packs, 1);
+  assert.equal(initial.result.suppliedM2, '1.44');
+  assert.equal(initial.result.totalMinor, 2807);
+  assert.equal(initial.quantity, '1');
+  assert.equal(Math.round(Number(initialDataset.packPriceMinor) / Number(initial.result.coverageM2)), 1949);
+
+  const areaChange = createTileCalculatorState(initialDataset, '6');
+  assert.equal(areaChange.result.packs, 5);
+  assert.equal(areaChange.result.suppliedM2, '7.20');
+  assert.equal(areaChange.result.totalMinor, 14035);
+  assert.equal(areaChange.quantity, '5');
+
+  const currentElement = {
+    dataset: { ...initialDataset },
+    setAttribute(name, value) {
+      const key = name
+        .slice(5)
+        .replace(/-([a-z])/g, (_, character) => character.toUpperCase());
+      this.dataset[key] = value;
+    },
+  };
+  const nextVariantElement = {
+    attributes: [
+      { name: 'data-pack-coverage-m2', value: '1.44' },
+      { name: 'data-tiles-per-box', value: '4' },
+      { name: 'data-tiles-per-m2', value: '2.78' },
+      { name: 'data-pack-price-minor', value: '3000' },
+      { name: 'data-available-packs', value: '4' },
+      { name: 'data-reserved-packs', value: '0' },
+      { name: 'data-continue-selling', value: 'false' },
+      { name: 'class', value: 'must-not-copy' },
+    ],
+  };
+  syncTileCalculatorDataAttributes(currentElement, nextVariantElement);
+
+  const variantChange = createTileCalculatorState(currentElement.dataset, '6');
+  assert.equal(variantChange.result.coverageM2, '1.44');
+  assert.equal(variantChange.result.totalMinor, 15000);
+  assert.equal(variantChange.result.insufficientStock, true);
+  assert.equal(variantChange.quantity, '1');
+  assert.equal(currentElement.dataset.class, undefined);
+
+  const availableArea = calculateOrderableArea({
+    coverageM2: initialDataset.packCoverageM2,
+    availablePacks: initialDataset.availablePacks,
+  });
+  assert.equal(availableArea, '146.88');
 });
