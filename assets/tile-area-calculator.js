@@ -1,9 +1,5 @@
 import { formatMoney } from '@theme/money-formatting';
-import {
-  calculateTileOrder,
-  formatArea,
-  resolveCoverage,
-} from './tile-area-calculator-core.js';
+import { createTileCalculatorState, syncTileCalculatorDataAttributes } from './tile-area-calculator-core.js';
 
 class TileAreaCalculator extends HTMLElement {
   #abortController = new AbortController();
@@ -34,12 +30,10 @@ class TileAreaCalculator extends HTMLElement {
       const next = detail?.html?.querySelector(`tile-area-calculator[data-product-id="${this.dataset.productId}"]`);
       if (!next) return;
 
-      const nextAddToCartButton = detail.html.querySelector('button[ref="addToCartButton"]');
+      const nextAddToCartButton = next.closest('form')?.querySelector('button[ref="addToCartButton"]');
       this.#variantCanAddToCart = nextAddToCartButton?.disabled === false;
 
-      for (const attribute of next.attributes) {
-        if (attribute.name.startsWith('data-')) this.setAttribute(attribute.name, attribute.value);
-      }
+      syncTileCalculatorDataAttributes(this, next);
       this.#render();
     }).catch((error) => {
       if (error?.name !== 'AbortError') console.warn('[tile-area-calculator] Variant update failed:', error);
@@ -53,20 +47,7 @@ class TileAreaCalculator extends HTMLElement {
     const total = this.querySelector('[data-calculator-total]');
     if (!input || !error || !packs || !total) return;
 
-    const continueSelling = this.dataset.continueSelling === 'true';
-    const coverage = resolveCoverage({
-      tilesPerBox: this.dataset.tilesPerBox,
-      tilesPerM2: this.dataset.tilesPerM2,
-    });
-    const coverageM2 = coverage ? formatArea(coverage.numerator, coverage.denominator) : '';
-    const result = calculateTileOrder({
-      requestedM2: input.value,
-      coverageM2,
-      packPriceMinor: this.dataset.packPriceMinor,
-      availablePacks: this.dataset.availablePacks,
-      reservedPacks: this.dataset.reservedPacks,
-      continueSelling,
-    });
+    const { coverage, result, quantity } = createTileCalculatorState(this.dataset, input.value);
 
     if (!result.valid || result.insufficientStock) {
       let message = !coverage
@@ -81,7 +62,7 @@ class TileAreaCalculator extends HTMLElement {
     }
 
     const calculatedPacks = result.valid && !result.insufficientStock ? result.packs : null;
-    this.#writeOrderQuantity(calculatedPacks);
+    this.#writeOrderQuantity(quantity);
     this.#setAddToCartDisabled(calculatedPacks === null || !this.#variantCanAddToCart);
 
     packs.textContent = result.valid ? `${result.packs} (${result.suppliedM2} m²)` : '—';
@@ -94,9 +75,9 @@ class TileAreaCalculator extends HTMLElement {
       : '—';
   };
 
-  #writeOrderQuantity(packs) {
+  #writeOrderQuantity(quantityValue) {
     const quantity = this.querySelector('input[data-tile-order-quantity]');
-    if (quantity instanceof HTMLInputElement) quantity.value = packs === null ? '1' : String(packs);
+    if (quantity instanceof HTMLInputElement) quantity.value = quantityValue;
   }
 
   #getAddToCartButton() {

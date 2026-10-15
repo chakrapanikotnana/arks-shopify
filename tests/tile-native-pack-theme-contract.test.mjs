@@ -5,20 +5,24 @@ import { readFile } from 'node:fs/promises';
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('PDP submits calculated packs as Shopify quantity for every configured tile product', async () => {
-  const [calculator, selector, buyButtons, productForm] = await Promise.all([
+  const [calculator, calculatorCore, selector, buyButtons, productForm] = await Promise.all([
     read('assets/tile-area-calculator.js'),
+    read('assets/tile-area-calculator-core.js'),
     read('snippets/quantity-selector.liquid'),
     read('blocks/buy-buttons.liquid'),
     read('assets/product-form.js'),
   ]);
 
-  assert.match(calculator, /quantity\.value = packs === null \? '1' : String\(packs\)/);
+  assert.match(calculator, /quantity\.value = quantityValue/);
   assert.doesNotMatch(calculator, /orderingModel|pack-v1|tile_ordering_model/);
-  assert.match(calculator, /packPriceMinor: this\.dataset\.packPriceMinor/);
-  assert.match(calculator, /availablePacks: this\.dataset\.availablePacks/);
-  assert.match(calculator, /reservedPacks: this\.dataset\.reservedPacks/);
+  assert.match(calculator, /createTileCalculatorState\(this\.dataset, input\.value\)/);
+  assert.match(calculatorCore, /coverageM2: dataset\.packCoverageM2/);
+  assert.match(calculatorCore, /packPriceMinor: dataset\.packPriceMinor/);
+  assert.match(calculatorCore, /availablePacks: dataset\.availablePacks/);
+  assert.match(calculatorCore, /reservedPacks: dataset\.reservedPacks/);
   assert.match(calculator, /addEventListener\('shopify:product:select', this\.#handleVariantChange/);
-  assert.match(calculator, /if \(attribute\.name\.startsWith\('data-'\)\) this\.setAttribute/);
+  assert.match(calculator, /syncTileCalculatorDataAttributes\(this, next\)/);
+  assert.match(calculator, /next\.closest\('form'\)\?\.querySelector\('button\[ref="addToCartButton"\]'\)/);
   assert.match(selector, /name="quantity" value="1" data-tile-order-quantity/);
   assert.doesNotMatch(selector, /name="properties\[/);
   assert.doesNotMatch(calculator, /randomUUID|Date\.now|data-tile-order-property|createTileLineProperties/);
@@ -27,8 +31,9 @@ test('PDP submits calculated packs as Shopify quantity for every configured tile
   assert.match(productForm, /formData\.get\('quantity'\)/);
   assert.doesNotMatch(productForm, /formData\.delete\(['"](?:properties|selling_plan)/);
   assert.match(selector, /data-pack-price-minor="\{\{ variant\.price \}\}"/);
-  assert.match(selector, /data-tiles-per-box="\{\{ product\.metafields\.arks\.tiles_per_box\.value \}\}"/);
-  assert.match(selector, /data-tiles-per-m2="\{\{ product\.metafields\.arks\.tiles_per_m2\.value \}\}"/);
+  assert.match(selector, /data-pack-coverage-m2="\{\{ calculator_pack_coverage_m2 \}\}"/);
+  assert.match(selector, /data-tiles-per-box="\{\{ calculator_tiles_per_box \}\}"/);
+  assert.match(selector, /data-tiles-per-m2="\{\{ calculator_tiles_per_m2 \}\}"/);
   assert.match(selector, /<dt>Your Total<\/dt>/);
   assert.match(selector, /data-available-packs="\{\{ variant\.inventory_quantity \}\}"/);
   assert.match(selector, /data-reserved-packs="\{\{ cart \| item_count_for_variant: variant\.id \}\}"/);
@@ -66,6 +71,91 @@ test('PDP keeps square-metre display pricing separate from native pack pricing',
   assert.match(productPriceScript, /priceContainer\.replaceWith\(newPrice\)/);
   assert.match(productInventoryScript, /StandardEvents\.productSelect/);
   assert.match(productInventoryScript, /morph\(this, newInventory, \{ childrenOnly: true \}\)/);
+});
+
+test('homepage and collection cards use direct product-owned decimal square-metre prices', async () => {
+  const [price, priceBlock, cardBlock, metafieldDefinitions] = await Promise.all([
+    read('snippets/price.liquid'),
+    read('blocks/price.liquid'),
+    read('blocks/_product-card.liquid'),
+    read('admin/arks5393-native-pack/01-create-metafield-definitions.graphql'),
+  ]);
+
+  assert.match(metafieldDefinitions, /key: "price_per_m2"[\s\S]*?type: "number_decimal"[\s\S]*?ownerType: PRODUCT/);
+  assert.match(metafieldDefinitions, /key: "compare_price_per_m2"[\s\S]*?type: "number_decimal"[\s\S]*?ownerType: PRODUCT/);
+  assert.match(price, /assign card_price_per_m2 = product_resource\.metafields\.arks\.price_per_m2\.value \| times: 100 \| round/);
+  assert.match(price, /assign card_compare_price_per_m2 = product_resource\.metafields\.arks\.compare_price_per_m2\.value \| times: 100 \| round/);
+  assert.doesNotMatch(price, /assign card_price_per_m2 = native_price \| divided_by/);
+  assert.match(price, /assign native_price = selected_variant\.price/);
+  assert.match(price, /assign native_compare_at_price = selected_variant\.compare_at_price/);
+  assert.match(price, /if card_compare_price_per_m2 > card_price_per_m2/);
+  assert.match(price, /if native_compare_at_price > native_price/);
+  assert.match(price, /show_product_card_dual_price == false/);
+  assert.match(priceBlock, /block_settings\.show_product_card_unit_prices \| default: false/);
+  assert.match(priceBlock, /show_product_card_unit_prices: show_product_card_unit_prices/);
+  assert.doesNotMatch(cardBlock, /show_product_card_unit_prices/);
+});
+
+test('homepage and collection use the same card block without opting in search or recommendations', async () => {
+  const [homepageSection, collectionSection, searchSection, recommendations] = await Promise.all([
+    read('sections/product-list.liquid'),
+    read('sections/main-collection.liquid'),
+    read('sections/search-results.liquid'),
+    read('sections/product-recommendations.liquid'),
+  ]);
+
+  for (const surface of [homepageSection, collectionSection]) {
+    assert.match(surface, /type: '_product-card'/);
+    assert.match(surface, /product_view_context: 'collection'/);
+  }
+  assert.match(searchSection, /product_view_context: 'search'/);
+  assert.match(recommendations, /product_view_context: 'recommendation'/);
+});
+
+test('homepage and collection card geometry keeps one-line titles and two fixed price rows', async () => {
+  const [
+    price,
+    priceBlock,
+    cardStyles,
+    resourceStyles,
+    carousel,
+    productGrid,
+    homepage,
+    collection,
+    cardMarkup,
+  ] = await Promise.all([
+    read('snippets/price.liquid'),
+    read('blocks/price.liquid'),
+    read('snippets/product-card-styles.liquid'),
+    read('snippets/resource-list-styles.liquid'),
+    read('snippets/resource-list-carousel.liquid'),
+    read('snippets/product-grid.liquid'),
+    read('templates/index.json'),
+    read('templates/collection.json'),
+    read('snippets/product-card.liquid'),
+  ]);
+
+  for (const template of [homepage, collection]) {
+    assert.match(template, /"image_ratio": "square"/);
+    assert.match(template, /"show_product_card_unit_prices": true/);
+  }
+
+  assert.match(homepage, /"columns_gap": 12/);
+  assert.match(collection, /"columns_gap_horizontal": 12/);
+  assert.match(cardMarkup, /data-card-context="\{\{ product_view_context \| escape \}\}"/);
+  assert.match(cardStyles, /white-space: nowrap/);
+  assert.match(cardStyles, /text-overflow: ellipsis/);
+  assert.match(cardStyles, /min-block-size: 2\.75rem/);
+  assert.match(resourceStyles, /--consistent-product-columns: 1/);
+  assert.match(resourceStyles, /--consistent-product-columns: 3/);
+  assert.match(resourceStyles, /--consistent-product-columns: 4/);
+  assert.match(productGrid, /repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(productGrid, /repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(carousel, /var\(--consistent-product-columns\)/);
+  assert.match(price, /product-card-price__row--primary/);
+  assert.match(price, /product-card-price__row--secondary/);
+  assert.match(price, /product-card-price__compare-placeholder/);
+  assert.match(priceBlock, /white-space: nowrap/);
 });
 
 test('cart quantity and coverage stay Shopify-authoritative', async () => {

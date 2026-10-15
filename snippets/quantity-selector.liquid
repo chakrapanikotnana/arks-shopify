@@ -31,8 +31,15 @@
     assign min_quantity = variant.quantity_rule.min | default: 1
   endif
 
+  assign calculator_tiles_per_box = product.metafields.arks.tiles_per_box.value
+  assign calculator_tiles_per_m2 = product.metafields.arks.tiles_per_m2.value
+  assign calculator_pack_coverage_m2 = 0
+  if calculator_tiles_per_box > 0 and calculator_tiles_per_m2 > 0
+    assign calculator_pack_coverage_m2 = calculator_tiles_per_box | divided_by: calculator_tiles_per_m2 | round: 2
+  endif
+
   assign is_tile_product = false
-  if product.metafields.arks.tiles_per_box.value > 0 and product.metafields.arks.tiles_per_m2.value > 0 and product.metafields.arks.price_per_m2.value > 0
+  if calculator_pack_coverage_m2 > 0 and product.metafields.arks.price_per_m2.value > 0
     assign is_tile_product = true
   endif
 
@@ -48,8 +55,9 @@
     class="tile-area-calculator"
     data-product-id="{{ product.id }}"
     data-pack-price-minor="{{ variant.price }}"
-    data-tiles-per-box="{{ product.metafields.arks.tiles_per_box.value }}"
-    data-tiles-per-m2="{{ product.metafields.arks.tiles_per_m2.value }}"
+    data-pack-coverage-m2="{{ calculator_pack_coverage_m2 }}"
+    data-tiles-per-box="{{ calculator_tiles_per_box }}"
+    data-tiles-per-m2="{{ calculator_tiles_per_m2 }}"
     data-available-packs="{{ variant.inventory_quantity }}"
     data-reserved-packs="{{ cart | item_count_for_variant: variant.id }}"
     data-continue-selling="{% if variant.inventory_policy == 'continue' or variant.inventory_management != 'shopify' %}true{% else %}false{% endif %}"

@@ -25,21 +25,47 @@
     }
   }
 
-  /* Collection and product list cards have equal heights */
-  :is(.product-grid__item, .resource-list__item) .product-card {
+  /* Homepage and collection cards share one fixed content geometry. */
+  :is(.product-grid__item, .resource-list__item) .product-card[data-card-context='collection'] {
     display: grid;
     height: 100%;
+    min-width: 0;
+    width: 100%;
   }
 
-  /* Product card title truncation - applied on mobile regardless of view */
-  @media screen and (max-width: 749px) {
-    :is(.product-card, .product-grid__card) :is(h4, .h4) {
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      -webkit-line-clamp: 3;
-    }
+  .product-card[data-card-context='collection'] .product-grid__card {
+    height: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .product-card[data-card-context='collection'] [ref='productTitleLink'] .text-block {
+    min-block-size: 1.3em;
+    width: 100%;
+  }
+
+  .product-card[data-card-context='collection'] [ref='productTitleLink'] .text-block > :is(p, h1, h2, h3, h4, h5, h6) {
+    display: block;
+    font-weight: 700;
+    margin: 0;
+    overflow: hidden;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .product-card[data-card-context='collection'] product-price {
+    container-type: inline-size;
+    display: block;
+    margin-block-start: auto;
+    min-block-size: 2.75rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .product-card[data-card-context='collection'] product-price [ref='priceContainer'] {
+    min-block-size: inherit;
+    min-width: 0;
   }
 
   .product-card__placeholder-image svg {
