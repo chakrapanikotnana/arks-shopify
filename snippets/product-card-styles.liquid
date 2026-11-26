@@ -25,26 +25,36 @@
     }
   }
 
-  /* Homepage and collection cards share one fixed content geometry. */
-  :is(.product-grid__item, .resource-list__item) .product-card[data-card-context='collection'] {
+  /* Collection and product recommendation cards share one fixed content geometry. */
+  :is(.product-grid__item, .resource-list__item) .product-card[data-card-context='collection'],
+  :is(.product-grid__item, .resource-list__item)
+    product-recommendations
+    .product-card[data-card-context='recommendation'] {
     display: grid;
     height: 100%;
     min-width: 0;
     width: 100%;
   }
 
-  .product-card[data-card-context='collection'] .product-grid__card {
+  .product-card[data-card-context='collection'] .product-grid__card,
+  product-recommendations .product-card[data-card-context='recommendation'] .product-grid__card {
     height: 100%;
     min-width: 0;
     width: 100%;
   }
 
-  .product-card[data-card-context='collection'] [ref='productTitleLink'] .text-block {
+  .product-card[data-card-context='collection'] [ref='productTitleLink'] .text-block,
+  product-recommendations .product-card[data-card-context='recommendation'] [ref='productTitleLink'] .text-block {
     min-block-size: 1.3em;
     width: 100%;
   }
 
-  .product-card[data-card-context='collection'] [ref='productTitleLink'] .text-block > :is(p, h1, h2, h3, h4, h5, h6) {
+  .product-card[data-card-context='collection'] [ref='productTitleLink'] .text-block > :is(p, h1, h2, h3, h4, h5, h6),
+  product-recommendations
+    .product-card[data-card-context='recommendation']
+    [ref='productTitleLink']
+    .text-block
+    > :is(p, h1, h2, h3, h4, h5, h6) {
     display: block;
     font-weight: 700;
     margin: 0;
@@ -54,7 +64,8 @@
     white-space: nowrap;
   }
 
-  .product-card[data-card-context='collection'] product-price {
+  .product-card[data-card-context='collection'] product-price,
+  product-recommendations .product-card[data-card-context='recommendation'] product-price {
     container-type: inline-size;
     display: block;
     margin-block-start: auto;
@@ -63,7 +74,11 @@
     width: 100%;
   }
 
-  .product-card[data-card-context='collection'] product-price [ref='priceContainer'] {
+  .product-card[data-card-context='collection'] product-price [ref='priceContainer'],
+  product-recommendations
+    .product-card[data-card-context='recommendation']
+    product-price
+    [ref='priceContainer'] {
     min-block-size: inherit;
     min-width: 0;
   }

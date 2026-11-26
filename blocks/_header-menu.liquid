@@ -383,7 +383,7 @@
     box-shadow: inset 0 -2px currentcolor;
   }
 
-  .menu-list__list-item:not([slot='overflow']) > .menu-list__link[aria-expanded='true']::before {
+  .menu-list__list-item:not([slot='overflow']) > .menu-list__link[aria-haspopup='true'][aria-expanded='true']::before {
     content: '';
     position: absolute;
     z-index: calc(var(--layer-header-menu) + 2);
